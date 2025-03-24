@@ -1,3 +1,4 @@
+#1.16.5버전용(적용이 않될수 있음 나중에 곧치겠습니다!)
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
