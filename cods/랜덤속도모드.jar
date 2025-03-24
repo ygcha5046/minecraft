@@ -1,4 +1,4 @@
-
+#1.16.5버전용(적용이 않될수 있음 나중에 곧치겠습니다!)
 @SubscribeEvent
 public void onEntityDamage(LivingHurtEvent event) {
     // 플레이어인지 확인
