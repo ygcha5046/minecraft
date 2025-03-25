@@ -6,8 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -19,34 +18,43 @@ public class KillTimePlugin extends JavaPlugin implements Listener {
 
     private final Map<Player, Long> playerStartTime = new HashMap<>();
     private final Map<Player, Boolean> isInKillTime = new HashMap<>();
+    private final Map<Player, Boolean> isKillTimeActive = new HashMap<>();
 
     @Override
     public void onEnable() {
         getServer().getPluginManager().registerEvents(this, this);
     }
 
+    // /시작 명령어 처리
     @EventHandler
-    public void onPlayerUseCommand(PlayerInteractEvent event) {
+    public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
+        String message = event.getMessage();
 
-        // "/시작" 커맨드로 시작
-        if (event.getAction().toString().contains("RIGHT_CLICK") && player.getInventory().getItemInMainHand().getType() == Material.NETHER_STAR) {
+        // /시작 명령어
+        if (message.equalsIgnoreCase("/시작")) {
+            event.setCancelled(true);
             startKillTime(player);
+        }
+
+        // /멈춰 명령어
+        if (message.equalsIgnoreCase("/멈춰")) {
+            event.setCancelled(true);
+            stopKillTime(player);
         }
     }
 
+    // 킬타임 시작
     private void startKillTime(Player player) {
-        player.setHealth(20.0);  // 체력 20으로 설정
+        // 체력 20으로 설정
+        player.setHealth(20.0);
         player.sendMessage("자기장 크기 1000으로 바뀌었습니다!");
 
-        // 자기장 크기 1000으로 설정
-        // 이런 기능을 구현하려면 추가적인 플러그인이 필요할 수 있습니다. (예: WorldBorder)
-
-        // 랜덤 소환
+        // 랜덤 위치로 텔레포트
         Random random = new Random();
         int x = random.nextInt(2000) - 1000;
         int z = random.nextInt(2000) - 1000;
-        player.teleport(player.getWorld().getHighestBlockAt(x, z).getLocation());  // 랜덤 위치로 텔레포트
+        player.teleport(player.getWorld().getHighestBlockAt(x, z).getLocation());
 
         // 5분 후 킬타임 시작 알림
         new BukkitRunnable() {
@@ -58,21 +66,35 @@ public class KillTimePlugin extends JavaPlugin implements Listener {
         }.runTaskLater(this, 6000);  // 5분 후
 
         // 5분 동안 데미지가 안 들어가게 설정
+        isKillTimeActive.put(player, true);
         new BukkitRunnable() {
             @Override
             public void run() {
                 isInKillTime.put(player, false);
+                isKillTimeActive.put(player, false);
             }
         }.runTaskLater(this, 6000);  // 5분 후 종료
     }
 
+    // 킬타임 중지
+    private void stopKillTime(Player player) {
+        // 체력 10으로 설정
+        player.setHealth(10.0);
+        player.sendMessage("킬타임이 중단되었습니다. 체력이 10으로 설정되었습니다.");
+        
+        // 킬타임 관련 상태를 종료
+        isKillTimeActive.put(player, false);
+        isInKillTime.put(player, false);
+    }
+
+    // 킬타임 동안 데미지 방지
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
 
-            // 킬타임 동안에는 데미지가 안 들어감
-            if (isInKillTime.getOrDefault(player, false)) {
+            // 킬타임이 활성화 상태일 때는 데미지를 취소
+            if (isKillTimeActive.getOrDefault(player, false)) {
                 event.setCancelled(true);
             }
         }
